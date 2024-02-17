@@ -1,23 +1,23 @@
 #include <FastLED.h>
 
 #define NUM_LEDS 59
-#define DATA_PIN 13
-#define STICK_Y_PIN 4
-#define STICK_X_PIN 3
-#define STICK_SW_PIN 8
+#define DATA_PIN 2
+#define STICK_Y_PIN 6
+#define STICK_X_PIN 7
+#define STICK_SW_PIN 3
 
-#define NUM_MODS 4
+#define NUM_MODS 5
 
 CRGB leds[NUM_LEDS];
 
 // single color mode
-uint8_t cur_mode_idx = 0;
-uint8_t chosen_color = 0, cur_brightness = 50;
+uint8_t cur_mode_idx = 4;
+uint8_t chosen_color = 0, cur_brightness = 70;
 
 // snake mode
 bool snake_control = true;
 uint8_t snake_color_change = 0;
-int snake_head = 0, snake_len = 30;
+int snake_head = 0, snake_len = 40;
 int y_val, x_val;
 
 // fade mode
@@ -32,8 +32,8 @@ void setup() {
     FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
     // FastLED.setBrightness(50);
     FastLED.setMaxPowerInVoltsAndMilliamps(5, 2000);
-    // Serial.begin(9600);
-    pinMode(STICK_SW_PIN, INPUT_PULLUP); 
+    Serial.begin(9600);
+    pinMode(STICK_SW_PIN, INPUT_PULLUP);
 }
 
 void loop() {
@@ -62,6 +62,10 @@ void loop() {
             fade_mode();
             break;
 
+        case 4:
+            fire_mode();
+            break;
+
         default:
             break;
     }
@@ -70,6 +74,7 @@ void loop() {
 
 void single_color_mode() {
     change_params();
+    delay(100);
     fill_solid(leds, NUM_LEDS, CHSV(chosen_color, 255, cur_brightness));
     FastLED.show();
 }
@@ -118,6 +123,26 @@ void fade_mode() {
     FastLED.show();
 }
 
+void fire_mode() {
+    change_params();
+    int rand_brightness, cycle_len;
+    for (int i = 0; i < NUM_LEDS;) {
+        rand_brightness = random(
+          cur_brightness-30, 
+          cur_brightness
+        );
+        cycle_len = random(1, 5);
+        for (int j = 0; j < cycle_len; j++) {
+            if (i+j < NUM_LEDS) {
+                leds[i+j] = CHSV(chosen_color, 255, rand_brightness);
+            }   
+        }
+        i += cycle_len;
+    }
+    delay(60);
+    FastLED.show();
+}
+
 void change_params() {
     x_val = analogRead(STICK_X_PIN);
     if (x_val > 950) {
@@ -127,18 +152,18 @@ void change_params() {
     }
 
     y_val = analogRead(STICK_Y_PIN);
-    if (y_val > 950) {
+    if (y_val > 950 && cur_brightness > 2) {
         cur_brightness -= 3;
-    } else if (y_val < 50) {
+    } else if (y_val < 50 && cur_brightness < 253) {
         cur_brightness += 3;
     }
-    if (cur_brightness > 255) {
+    if (cur_brightness >= 255) {
         cur_brightness = 255;
-    } else if (cur_brightness < 0) {
+    } else if (cur_brightness <= 0) {
         cur_brightness = 0;
     }
-
-    delay(100);    
+    Serial.println(chosen_color);
+    // delay(100);
 }
 
 void move_snake() {
